@@ -12,6 +12,7 @@ const momentoSigningKeySecretId: string = process.env.MOMENTO_SIGNING_KEY_SECRET
 const singingKeyTtlMinutes: string = process.env.SIGNING_KEY_TTL_MINUTES ?? DEFAULT_SIGNING_KEY_TTL_MINUTES;
 const renewWithinDays: string = process.env.RENEW_WITHIN_DAYS ?? DEFAULT_RENEW_WITHIN_DAYS;
 const exportMetrics: boolean = process.env.EXPORT_METRICS?.toLowerCase() === "true" ? true : false ?? false;
+const kmsKeyArn: string | undefined = process.env.KMS_KEY_ARN;
 
 const app = new cdk.App();
 new InfrastructureStack(app, `momento-signing-key-renewal-stack`, {
@@ -21,4 +22,5 @@ new InfrastructureStack(app, `momento-signing-key-renewal-stack`, {
   exportMetrics: exportMetrics,
   signingKeyTtlMinutes: parseInt(singingKeyTtlMinutes),
   renewWithinDays: parseInt(renewWithinDays),
+  kmsKeyArn: kmsKeyArn,
 });

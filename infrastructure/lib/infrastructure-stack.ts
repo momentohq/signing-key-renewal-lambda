@@ -18,14 +18,16 @@ interface Props extends cdk.StackProps {
   momentoSigningKeySecretId: string;
   // Set to true if you would like metrics exported to your AWS account
   exportMetrics: boolean;
-  // Override this value if your secrets reside in a different AWS region
-  secretsManagerRegion?: string;
   // The desired TTL in minutes until a newly-renewed signing key expires
   signingKeyTtlMinutes: number;
   // Specifies how soon to renew a signing key.
   // Example: if `renewWithinDays` is set to 3, the renewal lambda will check the `expiresAt` field of the
   // signing key. If the key will expire within 3 days, the lambda will renew the key.
   renewWithinDays: number;
+  // Override this value if your secrets reside in a different AWS region
+  secretsManagerRegion?: string;
+  // Set this if you are not using the default AWS KMS key for your secret
+  kmsKeyArn?: string;
 }
 
 export class InfrastructureStack extends cdk.Stack {
@@ -40,17 +42,37 @@ export class InfrastructureStack extends cdk.Stack {
     });
     lambdaRole.addToPolicy(new PolicyStatement({
       effect: Effect.ALLOW,
-      actions: ["secretsmanager:GetSecretValue", "secretsmanager:CreateSecret", "secretsmanager:UpdateSecret"],
+      actions: [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:CreateSecret",
+        "secretsmanager:PutSecretValue",
+      ],
       // For best-practices, restrict permissions to the ARN of your secret key
       resources: ['*']
     }));
+
+    if (props.kmsKeyArn !== undefined) {
+      lambdaRole.addToPolicy(new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ["kms:Decrypt", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:CreateGrant", "kms:DescribeKey"],
+        resources: [props.kmsKeyArn]
+      }));
+    }
+
+    if (props.exportMetrics) {
+      lambdaRole.addToPolicy(new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ["cloudwatch:PutMetricData"],
+        resources: ["*"]
+      }));
+    }
 
     const func = new lambda.Function(this, `momento-signing-key-renewal-lambda`, {
       runtime: lambda.Runtime.JAVA_8_CORRETTO,
       code: lambda.Code.fromAsset('../target/signing-key-renewal-lambda-1.0-SNAPSHOT.jar'),
       handler: 'example.Handler',
       functionName: `momento-signing-key-renewal-lambda`,
-      timeout: Duration.seconds(35),
+      timeout: Duration.seconds(60),
       memorySize: 512,
       role: lambdaRole,
       environment: {
@@ -61,6 +83,7 @@ export class InfrastructureStack extends cdk.Stack {
         SECRETS_MANAGER_REGION: props.secretsManagerRegion ?? Fn.sub("${AWS::Region}"),
         SIGNING_KEY_TTL_MINUTES: props.signingKeyTtlMinutes.toString(),
         RENEW_WITHIN_DAYS: props.renewWithinDays.toString(),
+        KMS_KEY_ARN: props.kmsKeyArn ?? "",
       }
     })
 
