@@ -8,7 +8,6 @@ import com.amazonaws.services.lambda.runtime.LambdaLogger;
 
 import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClient;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
 import com.amazonaws.util.StringUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -33,6 +32,8 @@ public class Handler implements RequestHandler<Map<String,String>, String> {
 
   @Override
   public String handleRequest(Map<String,String> event, Context context) {
+    LambdaLogger logger = context.getLogger();
+
     final String awsRegion = System.getenv(SECRETS_MANAGER_REGION);
     final String momentoAuthTokenSecretId = System.getenv(MOMENTO_AUTH_TOKEN_SECRET_ID);
     final String momentoAuthTokenKeyName = System.getenv(MOMENTO_AUTH_TOKEN_SECRET_KEY_NAME);
@@ -42,7 +43,6 @@ public class Handler implements RequestHandler<Map<String,String>, String> {
     final int renewWithinDays = Integer.parseInt(System.getenv(RENEW_WITHIN_DAYS));
     final boolean exportMetrics = Boolean.parseBoolean(System.getenv(EXPORT_METRICS));
 
-    LambdaLogger logger = context.getLogger();
     AWSSecretsManager secretsManager = AWSSecretsManagerClient.builder()
             .withRegion(awsRegion)
             .build();

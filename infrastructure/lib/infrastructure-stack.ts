@@ -85,7 +85,9 @@ export class InfrastructureStack extends cdk.Stack {
         RENEW_WITHIN_DAYS: props.renewWithinDays.toString(),
         KMS_KEY_ARN: props.kmsKeyArn ?? "",
       }
-    })
+    });
+
+    func.grantInvoke(new iam.ServicePrincipal("secretsmanager"));
 
     const target = new targets.LambdaFunction(func, {});
     const event = new events.Rule(this, `momento-signing-key-renewal-event-rule`, {

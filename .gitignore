@@ -34,3 +34,4 @@ target
 .DS_Store
 cdk.context.json
 infrastructure/yarn.lock
+*.env

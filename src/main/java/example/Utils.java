@@ -26,7 +26,7 @@ public class Utils {
                 .withName(secretId)
                 .withDescription("Stores a serialized Momento signing key to create presigned URLs")
                 .withSecretString(secretString);
-        Optional<String> maybeKeyArn = Optional.of(kmsKeyArn);
+        Optional<String> maybeKeyArn = Optional.ofNullable(kmsKeyArn);
         maybeKeyArn.ifPresent(createSecretRequest::withKmsKeyId);
         awsSecretsManager.createSecret(createSecretRequest);
     }

@@ -46,3 +46,45 @@ export AWS_PROFILE=personal
 ```shell
 AWS_PROFILE=<YOUR_AWS_PROFILE_NAME> ./teardown.sh
 ```
+
+## Local testing
+You can use Docker to build and test changes as desired. First, create a `.env` file with the following:
+
+```shell
+AWS_REGION=<region>
+SECRETS_MANAGER_REGION=<region>
+AWS_ACCESS_KEY_ID=<access_key>
+AWS_SECRET_ACCESS_KEY=<secret_access_key>
+AWS_SESSION_TOKEN=<session_token>
+SIGNING_KEY_TTL_MINUTES=<ttl>
+RENEW_WITHIN_DAYS=<time>
+MOMENTO_AUTH_TOKEN_SECRET_ID=<secret_id>
+MOMENTO_AUTH_TOKEN_SECRET_KEY_NAME=<key_name>
+MOMENTO_SIGNING_KEY_SECRET_ID=<secret_id>
+```
+
+Ensure none of these have quotes around them.
+
+Compile with:
+
+```shell
+mvn compile dependency:copy-dependencies -DincludeScope=runtime
+```
+
+Build the docker image:
+
+```shell
+docker build -t signing-key-renewal .
+```
+
+And then run with:
+
+```shell
+docker run --env-file=.env -p 9000:8080 signing-key-renewal
+```
+
+In a separate terminal:
+
+```shell
+curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{}'
+```
