@@ -41,3 +41,8 @@ export AWS_PROFILE=personal
   export MOMENTO_SIGNING_KEY_SECRET_ID="my/momento/signing-key"
   ./deploy.sh
 ```
+
+## To tear down stack
+```shell
+AWS_PROFILE=<YOUR_AWS_PROFILE_NAME> ./teardown.sh
+```
