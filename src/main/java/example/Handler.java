@@ -1,78 +1,87 @@
 package example;
 
-import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.amazonaws.services.secretsmanager.AWSSecretsManagerClient;
 import com.amazonaws.util.StringUtils;
+import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import example.awsclients.AwsClientsFactory;
+import example.awsclients.cloudwatch.CloudWatch;
+import example.awsclients.secretsmanager.SecretsManager;
 import momento.sdk.SimpleCacheClient;
+import momento.sdk.exceptions.InvalidArgumentException;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-import static example.Utils.SecretResultType;
-
-// Handler value: example.Handler
+// Handler entry point: example.Handler
 public class Handler implements RequestHandler<Map<String,String>, String> {
   private static final String SECRETS_MANAGER_REGION = "SECRETS_MANAGER_REGION";
   private static final String MOMENTO_AUTH_TOKEN_SECRET_ID = "MOMENTO_AUTH_TOKEN_SECRET_ID";
-  private static final String MOMENTO_AUTH_TOKEN_SECRET_KEY_NAME = "MOMENTO_AUTH_TOKEN_SECRET_KEY_NAME";
-  private static final String MOMENTO_SIGNING_KEY_SECRET_ID = "MOMENTO_SIGNING_KEY_SECRET_ID";
   private static final String SIGNING_KEY_TTL_MINUTES = "SIGNING_KEY_TTL_MINUTES";
-  private static final String RENEW_WITHIN_DAYS = "RENEW_WITHIN_DAYS";
-  private static final String KMS_KEY_ARN = "KMS_KEY_ARN";
   private static final String EXPORT_METRICS = "EXPORT_METRICS";
+  private static final String USE_LOCAL_STUBS = "USE_LOCAL_STUBS";
+  private final List<String> environmentVariableNames = Arrays.asList(
+         SECRETS_MANAGER_REGION,
+         MOMENTO_AUTH_TOKEN_SECRET_ID,
+         SIGNING_KEY_TTL_MINUTES,
+         EXPORT_METRICS
+  );
 
-  private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+  private final Gson gson = new GsonBuilder()
+          .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+          .setPrettyPrinting()
+          .create();
+
+  private void validateEnvironment() {
+    final Map<String, String> env = System.getenv();
+    for (String envVariable : environmentVariableNames) {
+      if (!env.containsKey(envVariable) || StringUtils.isNullOrEmpty(env.get(envVariable))) {
+        throw new InvalidArgumentException(String.format("Expected %s to have a value but none was provided", envVariable));
+      }
+    }
+  }
 
   @Override
   public String handleRequest(Map<String,String> event, Context context) {
     LambdaLogger logger = context.getLogger();
-
+    validateEnvironment();
     final String awsRegion = System.getenv(SECRETS_MANAGER_REGION);
     final String momentoAuthTokenSecretId = System.getenv(MOMENTO_AUTH_TOKEN_SECRET_ID);
-    final String momentoAuthTokenKeyName = System.getenv(MOMENTO_AUTH_TOKEN_SECRET_KEY_NAME);
-    final String momentoSigningKeySecretId = System.getenv(MOMENTO_SIGNING_KEY_SECRET_ID);
-    final String kmsKeyArn = System.getenv(KMS_KEY_ARN);
     final int signingKeyTtlMinutes = Integer.parseInt(System.getenv(SIGNING_KEY_TTL_MINUTES));
-    final int renewWithinDays = Integer.parseInt(System.getenv(RENEW_WITHIN_DAYS));
     final boolean exportMetrics = Boolean.parseBoolean(System.getenv(EXPORT_METRICS));
+    final boolean isDockerEnv = useLocalStubs();
 
-    AWSSecretsManager secretsManager = AWSSecretsManagerClient.builder()
-            .withRegion(awsRegion)
-            .build();
-    AmazonCloudWatch cloudWatch = AmazonCloudWatchClientBuilder.standard()
-            .withRegion(awsRegion)
-            .build();
-    SimpleCacheClient momentoClient = createSimpleCacheClient(secretsManager, momentoAuthTokenSecretId, momentoAuthTokenKeyName);
-    SigningKeyWorkflow signingKeyWorkflow = new SigningKeyWorkflow(logger,
-            secretsManager,
-            cloudWatch,
-            gson,
-            momentoClient,
-            signingKeyTtlMinutes,
-            renewWithinDays,
-            kmsKeyArn,
-            exportMetrics);
-    signingKeyWorkflow.renewSigningKeys(momentoSigningKeySecretId);
-    return "";
+    SecretsManager secretsManager = AwsClientsFactory.getSecretsManagerClient(isDockerEnv, logger, awsRegion);
+    CloudWatch cloudWatch = AwsClientsFactory.getCloudWatchClient(isDockerEnv, logger);
+    try (SimpleCacheClient momentoClient = createSimpleCacheClient(secretsManager,momentoAuthTokenSecretId)) {
+      RotationWorkflow rotationWorkflow = new RotationWorkflow(logger,
+              secretsManager,
+              cloudWatch,
+              gson,
+              momentoClient,
+              signingKeyTtlMinutes,
+              exportMetrics);
+      rotationWorkflow.processRotation(event);
+      return "";
+    }
   }
 
-  private SimpleCacheClient createSimpleCacheClient(AWSSecretsManager secretsManager,
-                                                    String momentoAuthTokenSecretId,
-                                                    String momentoAuthTokenKeyName) {
-    if (StringUtils.isNullOrEmpty(momentoAuthTokenSecretId)) {
-      throw new RuntimeException("MOMENTO_AUTH_TOKEN_SECRET_ID was empty");
-    }
+  private SimpleCacheClient createSimpleCacheClient(SecretsManager secretsManager,
+                                                    String momentoAuthTokenSecretId) {
     // This assumes your Momento auth token is stored as a pure
-    String momentoAuthTokenSecret = Utils.getSecretValueString(secretsManager, momentoAuthTokenSecretId);
-    Map<String, String> secretJson = gson.fromJson(momentoAuthTokenSecret, SecretResultType);
-    String momentoAuthToken = secretJson.get(momentoAuthTokenKeyName);
+    String momentoAuthToken = secretsManager.getSecretValueString(momentoAuthTokenSecretId, null, null);
     return SimpleCacheClient.builder(momentoAuthToken, 300).build();
   }
+
+  private boolean useLocalStubs() {
+    Optional<String> maybeUseLocalStubs = Optional.ofNullable(System.getenv(USE_LOCAL_STUBS));
+    return maybeUseLocalStubs.filter(Boolean::parseBoolean).isPresent();
+  }
 }
+
