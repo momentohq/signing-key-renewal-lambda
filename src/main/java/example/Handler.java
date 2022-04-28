@@ -21,16 +21,14 @@ import java.util.Optional;
 
 // Handler entry point: example.Handler
 public class Handler implements RequestHandler<Map<String,String>, String> {
-  private static final String SECRETS_MANAGER_REGION = "SECRETS_MANAGER_REGION";
-  private static final String MOMENTO_AUTH_TOKEN_SECRET_ID = "MOMENTO_AUTH_TOKEN_SECRET_ID";
+  private static final String MOMENTO_AUTH_TOKEN_SECRET_ARN = "MOMENTO_AUTH_TOKEN_SECRET_ARN";
   private static final String SIGNING_KEY_TTL_MINUTES = "SIGNING_KEY_TTL_MINUTES";
   private static final String EXPORT_METRICS = "EXPORT_METRICS";
   private static final String USE_LOCAL_STUBS = "USE_LOCAL_STUBS";
   private final List<String> environmentVariableNames = Arrays.asList(
-         SECRETS_MANAGER_REGION,
-         MOMENTO_AUTH_TOKEN_SECRET_ID,
-         SIGNING_KEY_TTL_MINUTES,
-         EXPORT_METRICS
+          MOMENTO_AUTH_TOKEN_SECRET_ARN,
+          SIGNING_KEY_TTL_MINUTES,
+          EXPORT_METRICS
   );
 
   private final Gson gson = new GsonBuilder()
@@ -51,15 +49,14 @@ public class Handler implements RequestHandler<Map<String,String>, String> {
   public String handleRequest(Map<String,String> event, Context context) {
     LambdaLogger logger = context.getLogger();
     validateEnvironment();
-    final String awsRegion = System.getenv(SECRETS_MANAGER_REGION);
-    final String momentoAuthTokenSecretId = System.getenv(MOMENTO_AUTH_TOKEN_SECRET_ID);
+    final String momentoAuthTokenSecretArn = System.getenv(MOMENTO_AUTH_TOKEN_SECRET_ARN);
     final int signingKeyTtlMinutes = Integer.parseInt(System.getenv(SIGNING_KEY_TTL_MINUTES));
     final boolean exportMetrics = Boolean.parseBoolean(System.getenv(EXPORT_METRICS));
-    final boolean isDockerEnv = useLocalStubs();
+    final boolean shouldUseLocalStubs = shouldUseLocalStubs();
 
-    SecretsManager secretsManager = AwsClientsFactory.getSecretsManagerClient(isDockerEnv, logger, awsRegion);
-    CloudWatch cloudWatch = AwsClientsFactory.getCloudWatchClient(isDockerEnv, logger);
-    try (SimpleCacheClient momentoClient = createSimpleCacheClient(secretsManager,momentoAuthTokenSecretId)) {
+    SecretsManager secretsManager = AwsClientsFactory.getSecretsManagerClient(shouldUseLocalStubs, logger);
+    CloudWatch cloudWatch = AwsClientsFactory.getCloudWatchClient(shouldUseLocalStubs, logger);
+    try (SimpleCacheClient momentoClient = createSimpleCacheClient(secretsManager,momentoAuthTokenSecretArn)) {
       RotationWorkflow rotationWorkflow = new RotationWorkflow(logger,
               secretsManager,
               cloudWatch,
@@ -79,7 +76,7 @@ public class Handler implements RequestHandler<Map<String,String>, String> {
     return SimpleCacheClient.builder(momentoAuthToken, 300).build();
   }
 
-  private boolean useLocalStubs() {
+  private boolean shouldUseLocalStubs() {
     Optional<String> maybeUseLocalStubs = Optional.ofNullable(System.getenv(USE_LOCAL_STUBS));
     return maybeUseLocalStubs.filter(Boolean::parseBoolean).isPresent();
   }

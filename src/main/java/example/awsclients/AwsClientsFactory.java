@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 public class AwsClientsFactory {
-    public static SecretsManager getSecretsManagerClient(boolean isDockerEnv, LambdaLogger logger, String region) {
+    public static SecretsManager getSecretsManagerClient(boolean isDockerEnv, LambdaLogger logger) {
         if (isDockerEnv) {
             String localMomentoToken = System.getenv("TEST_AUTH_TOKEN");
             Map<String, List<String>> versionStagesOverride = new HashMap<>();
@@ -25,9 +25,7 @@ public class AwsClientsFactory {
             versionStagesOverride.put("c", Collections.singletonList("AWSPENDING"));
             return new LocalSecretsMangerClient(logger, localMomentoToken, versionStagesOverride);
         }
-        return new SecretsManagerClient(AWSSecretsManagerClient.builder()
-                .withRegion(region)
-                .build());
+        return new SecretsManagerClient(AWSSecretsManagerClient.builder().build());
     }
 
     public static CloudWatch getCloudWatchClient(boolean isDockerEnv, LambdaLogger logger) {

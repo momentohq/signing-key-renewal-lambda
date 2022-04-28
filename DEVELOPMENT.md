@@ -1,38 +1,26 @@
-# Local development
+# DEVELOPMENT 
 
 ## Prerequisites
-* You have an AWS account
-* You have generated a Momento auth token and stored it as plaintext in Secrets Manager
-* You have created a secret in Secrets Manger containing either blank output _or_ the full serialized JSON from a Momento `CreateSigningKey` response
+* Java 8
+* Node 16+
+* Maven
+* You have your Momento auth token stored away in Secrets Manager (see [README](./README.md) for instructions)
 
 ## How to build and deploy
 * To build the Java files, run `mvn clean install`
-* To build the CDK output, run `cd infrastructure && npm run build`
+* To build the CDK output, run `cd infrastructure && npm install && npm run build`
 * To deploy to your own account, run:
 ```shell
-export AWS_PROFILE=<YOUR_AWS_PROFILE_NAME>
-   # export SIGNING_KEY_TTL_MINUTES=<TTL_IN_MINUTES_FOR_SIGNING_KEY> \ # Optional
-   # export EXPORT_METRICS=true \ # Optional
-   # export KMS_KEY_ARN=<YOUR_KMS_KEY_ARN> \ # Optional
-   export MOMENTO_AUTH_SECRET_ID=<YOUR_SECRET_IN_SECRETS_MANAGER_WITH_YOUR_MOMENTO_AUTH_TOKEN>
-   ./deploy.sh
+AWS_PROFILE=<YOUR_AWS_PROFILE_NAME> \
+MOMENTO_AUTH_TOKEN_SECRET_ARN=<ARN_OF_MOMENTO_AUTH_TOKEN_SECRET> ./deploy.sh
 ```
 
-From here, you can manually add your own rotation schedule to your secret.
-
-## Example deploy command
-Here is an example assuming the following:
-* You have an `AWS_PROFILE` set up with the name `personal`
-* You have already stored your Momento auth token safely inside Secrets Manager named `"my/momento/auth-token"`
-* You have/desire a secret in Secrets Manager named `"my/momento/signing-key"` for your signing key
-
-You would run the following command to deploy:
-
-```shell
-export AWS_PROFILE=personal \
-  export MOMENTO_AUTH_SECRET_ID="my/momento/auth-token"
-  ./deploy.sh
-```
+Below is a list of optional environment variables you can pass in:
+* `MOMENTO_SIGNING_KEY_SECRET_NAME`: override the name of the Secret created by the stack to store your signing key. **Default:** `momento/signing-key`
+* `SIGNING_KEY_TTL_MINUTES`: override the ttl of the signing key (in minutes) when the key is renewed. **Default:** 14 days
+* `AUTO_ROTATION_IN_DAYS`: override the schedule (in days) in which the signing key will be renewed. **Default:** 11 days
+* `EXPORT_METRICS`: set to `true` if you would like the lambda to publish CloudWatch metrics to your account indicating the time until the signing key expires. **Default:** `false`
+* `KMS_KEY_ARN`: override if you want to use your own KMS key to encrypt your secret in Secrets Manager. **Default:** `null`
 
 ## To tear down stack
 ```shell
@@ -49,21 +37,19 @@ environment variables.
 
 ```shell
 AWS_REGION=<region>
-SECRETS_MANAGER_REGION=<region>
 AWS_ACCESS_KEY_ID=<access_key>
 AWS_SECRET_ACCESS_KEY=<secret_access_key>
 AWS_SESSION_TOKEN=<session_token>
 SIGNING_KEY_TTL_MINUTES=<ttl>
-MOMENTO_AUTH_TOKEN_SECRET_ID=<secret_id>
+MOMENTO_AUTH_TOKEN_SECRET_ARN=<secret_arn>
 EXPORT_METRICS=<true|false>
 ```
 
 ***If you want to test local changes without making AWS calls (but still making Momento calls)***:
 ```shell
 AWS_REGION=<region>
-SECRETS_MANAGER_REGION=<region>
 SIGNING_KEY_TTL_MINUTES=<ttl>
-MOMENTO_AUTH_TOKEN_SECRET_ID=<secret_id>
+MOMENTO_AUTH_TOKEN_SECRET_ARN=<secret_id>
 EXPORT_METRICS=<true|false>
 USE_LOCAL_STUBS=true
 TEST_AUTH_TOKEN=<your actual momento auth token>
