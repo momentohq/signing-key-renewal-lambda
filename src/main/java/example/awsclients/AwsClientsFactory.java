@@ -16,8 +16,8 @@ import java.util.List;
 import java.util.Map;
 
 public class AwsClientsFactory {
-    public static SecretsManager getSecretsManagerClient(boolean isDockerEnv, LambdaLogger logger) {
-        if (isDockerEnv) {
+    public static SecretsManager getSecretsManagerClient(boolean useLocalStubs, LambdaLogger logger) {
+        if (useLocalStubs) {
             String localMomentoToken = System.getenv("TEST_AUTH_TOKEN");
             Map<String, List<String>> versionStagesOverride = new HashMap<>();
             versionStagesOverride.put("a", Collections.singletonList("AWSPREVIOUS"));
