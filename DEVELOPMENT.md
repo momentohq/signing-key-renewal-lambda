@@ -6,6 +6,17 @@
 * Maven
 * You have your Momento auth token stored away in Secrets Manager (see [README](./README.md) for instructions)
 
+## How to update Momento SDK
+Edit [pom.xml](./pom.xml) and find the `<dependency>` section for the Momento SDK. It will look like this:
+```xml
+<dependency>
+    <groupId>momento.sandbox</groupId>
+        <artifactId>momento-sdk</artifactId>
+    <version>0.20.0</version> <!-- Edit this part here --> 
+</dependency>
+```
+
+
 ## How to build and deploy
 * To build the Java files, run `mvn clean install`
 * To build the CDK output, run `cd infrastructure && npm install && npm run build`
