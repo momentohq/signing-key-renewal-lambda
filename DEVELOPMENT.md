@@ -91,3 +91,8 @@ In a separate terminal:
 ```shell
 curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d @events/createSecretEvent.json # or whichever event you'd like
 ```
+
+You can also test manual rotation:
+```shell
+curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{"momento_auth_token":"<key>", "momento_signing_key_secret_name": "momento/signing-key", "signing_key_ttl_minutes": 60}'
+```

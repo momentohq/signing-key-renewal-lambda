@@ -47,6 +47,15 @@ public class Handler implements RequestHandler<Map<String,String>, String> {
 
   @Override
   public String handleRequest(Map<String,String> event, Context context) {
+    if (isAutomaticRotationWorkflow(event)) {
+      automaticRotationWorkflow(event, context);
+    } else {
+      manualRotationWorkflow(event, context);
+    }
+    return "";
+  }
+
+  private void automaticRotationWorkflow(Map<String, String> event, Context context) {
     LambdaLogger logger = context.getLogger();
     validateEnvironment();
     final String momentoAuthTokenSecretArn = System.getenv(MOMENTO_AUTH_TOKEN_SECRET_ARN);
@@ -65,7 +74,36 @@ public class Handler implements RequestHandler<Map<String,String>, String> {
               signingKeyTtlMinutes,
               exportMetrics);
       rotationWorkflow.processRotation(event);
-      return "";
+    }
+  }
+
+  private void manualRotationWorkflow(Map<String, String> event, Context context) {
+    LambdaLogger logger = context.getLogger();
+    logger.log("Received event: " + event.toString());
+    final Optional<String> momentoAuthToken = Optional.ofNullable(event.getOrDefault("momento_auth_token", null));
+    final Optional<String> momentoSigningKeySecretName = Optional.ofNullable(event.getOrDefault("momento_signing_key_secret_name", null));
+    if (!momentoAuthToken.isPresent()) {
+      throw new IllegalArgumentException("Presumed manual rotation workflow, momento_auth_token is required.");
+    }
+    if (!momentoSigningKeySecretName.isPresent()) {
+      throw new IllegalArgumentException("Presumed manual rotation workflow, momento_signing_key_secret_name is required.");
+    }
+    logger.log(momentoSigningKeySecretName.get());
+    final int signingKeyTtlMinutes = Integer.parseInt(event.getOrDefault("signing_key_ttl_minutes", "20160" ));
+    final boolean exportMetrics = Boolean.parseBoolean(event.getOrDefault("export_metrics", "false" ));
+    final boolean shouldUseLocalStubs = Boolean.parseBoolean(event.getOrDefault("use_local_stubs", "false" ));
+
+    SecretsManager secretsManager = AwsClientsFactory.getSecretsManagerClient(shouldUseLocalStubs, logger);
+    CloudWatch cloudWatch = AwsClientsFactory.getCloudWatchClient(shouldUseLocalStubs, logger);
+    try (SimpleCacheClient momentoClient = SimpleCacheClient.builder(momentoAuthToken.get(), 300).build()) {
+      RotationWorkflow rotationWorkflow = new RotationWorkflow(logger,
+              secretsManager,
+              cloudWatch,
+              gson,
+              momentoClient,
+              signingKeyTtlMinutes,
+              exportMetrics);
+      rotationWorkflow.manualRotation(momentoSigningKeySecretName.get());
     }
   }
 
@@ -79,6 +117,10 @@ public class Handler implements RequestHandler<Map<String,String>, String> {
   private boolean shouldUseLocalStubs() {
     Optional<String> maybeUseLocalStubs = Optional.ofNullable(System.getenv(USE_LOCAL_STUBS));
     return maybeUseLocalStubs.filter(Boolean::parseBoolean).isPresent();
+  }
+
+  private boolean isAutomaticRotationWorkflow(Map<String, String> event) {
+    return event.containsKey("ClientRequestToken") && event.containsKey("SecretId") && event.containsKey("Step");
   }
 }
 

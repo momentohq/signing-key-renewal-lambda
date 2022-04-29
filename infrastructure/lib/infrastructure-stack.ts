@@ -100,26 +100,24 @@ export class InfrastructureStack extends cdk.Stack {
           'secretsmanager:DescribeSecret',
           'secretsmanager:UpdateSecretVersionStage',
         ],
-        resources: [momentoSigningKeySecret.secretArn],
+        resources: ["*"],
       })
     );
     lambdaRole.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['secretsmanager:GetSecretValue'],
-        resources: [momentoAuthTokenSecretArnParam.valueAsString],
+        resources: ["*"],
       })
     );
 
-    if (props.exportMetrics) {
-      lambdaRole.addToPolicy(
-        new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: ['cloudwatch:PutMetricData'],
-          resources: ['*'],
-        })
-      );
-    }
+    lambdaRole.addToPolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['cloudwatch:PutMetricData'],
+        resources: ['*'],
+      })
+    );
 
     const func = new lambda.Function(
       this,

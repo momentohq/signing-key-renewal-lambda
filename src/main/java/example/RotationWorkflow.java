@@ -38,6 +38,19 @@ public class RotationWorkflow {
         this.exportMetrics = exportMetrics;
     }
 
+    public void manualRotation(String secretName) {
+        try {
+            secretsManager.getSecretValueString(secretName, null, null);
+        } catch (ResourceNotFoundException e) {
+            this.logger.log(String.format("%s not found, creating new secret", secretName));
+            secretsManager.createSecret(secretName, null, null);
+        }
+        MomentoSigningKey signingKey = MomentoSigningKey.fromCreateSigningResponse(this.momentoClient.createSigningKey(this.signingKeyTtlMinutes));
+        String serializedSigningKey = this.gson.toJson(signingKey);
+        secretsManager.putSecretValue(secretName, serializedSigningKey, null, null);
+        this.logger.log(String.format("Signing key rotated for %s", secretName));
+    }
+
     public void processRotation(Map<String, String> event) {
         String arn = event.get("SecretId");
         String token = event.get("ClientRequestToken");

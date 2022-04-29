@@ -19,6 +19,18 @@ Alternatively, if you would like to make local changes and deploy via CLI, follo
 
 [DEVELOPMENT](./DEVELOPMENT.md)
 
+### Manual rotation
+With this lambda deployed you can also manually invoke your lambda to rotate a secret for you. Simply send an event with the following properties:
+```json
+{
+  "momento_auth_token":"<your auth token here>",
+  "momento_signing_key_secret_name":"<name of secret to rotate>",
+  "signing_key_ttl_minutes": "<ttl for signing key in minutes>",
+  "export_metrics": false,
+  "use_local_stubs": false
+}
+```
+
 ## Retrieving signing key from secret
 Your application simply needs to retrieve the newly-generated Secret from Secrets Manager. The secret name (unless overwritten) is `momento/signing-key`.
 The returned value will look similar to this:
