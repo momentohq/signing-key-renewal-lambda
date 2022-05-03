@@ -1,0 +1,7 @@
+{
+  "momento_auth_token":"<your auth token here>",
+  "momento_signing_key_secret_name":"momento/signing-key",
+  "signing_key_ttl_minutes": 5,
+  "export_metrics": false,
+  "use_local_stubs": false
+}
