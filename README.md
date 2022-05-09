@@ -11,11 +11,7 @@ aws secretsmanager create-secret --name "momento/auth-token" --secret-string "<Y
 Ensure you have the ARN of your secret containing your Momento auth token available.
 
 ## Deploying to account
-Simply click this button below to one-click deploy the CloudFormation stack to your account.
-
-**BUTTON UNDER CONSTRUCTION**
-
-Alternatively, if you would like to make local changes and deploy via CLI, follow the instructions here:
+To deploy via CLI, follow the instructions here:
 
 [DEVELOPMENT](./DEVELOPMENT.md)
 
