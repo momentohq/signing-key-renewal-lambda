@@ -3,22 +3,18 @@
 ## Prerequisites
 * Java 8
 * Node 16+
-* Maven
+* Gradle
 * You have your Momento auth token stored away in Secrets Manager (see [README](./README.md) for instructions)
 
 ## How to update Momento SDK
-Edit [pom.xml](./pom.xml) and find the `<dependency>` section for the Momento SDK. It will look like this:
-```xml
-<dependency>
-    <groupId>momento.sandbox</groupId>
-        <artifactId>momento-sdk</artifactId>
-    <version>0.20.0</version> <!-- Edit this part here --> 
-</dependency>
+Edit [build.gradle.kts](./build.gradle.kts) and edit this line:
+```kotlin
+implementation("momento.sandbox:momento-sdk:0.21.0")
 ```
 
 
 ## How to build and deploy
-* To build the Java files, run `mvn clean install`
+* To build the Java files, run `./gradlew build`
 * To build the CDK output, run `cd infrastructure && npm install && npm run build`
 * To deploy to your own account, run:
 ```shell
@@ -71,7 +67,7 @@ Ensure none of these have quotes around them.
 Compile with:
 
 ```shell
-mvn compile dependency:copy-dependencies -DincludeScope=runtime
+./gradlew build
 ```
 
 Build the docker image:
