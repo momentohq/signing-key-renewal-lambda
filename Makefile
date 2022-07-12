@@ -9,7 +9,7 @@ pull-request-ci: gradle-build
 
 pipeline-build: gradle-build
 	cd infrastructure \
-		&& npm i \
+		&& npm ci \
 		&& npm run build
 
 pipeline-synth:
