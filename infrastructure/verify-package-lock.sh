@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-set -e
+set -ex
+
+ls -la
 
 private_repo=$(cat infrastructure/package-lock.json | grep "momento-prod")
 if [ -z "$private_repo" ]
