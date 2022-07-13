@@ -32,10 +32,15 @@ export class InfrastructureStack extends cdk.Stack {
 
     // Having a CfnParameter here should ensure that one-click deploy users can pass in their Secret ARN containing
     // their Momento auth token
-    const momentoAuthTokenSecretArnParam = new cdk.CfnParameter(this, "momentoAuthTokenSecretArn", {
-      type: "String",
-      description: "The ARN containing your Momento auth token as plaintext (best practice)"
-    });
+    const momentoAuthTokenSecretArnParam = new cdk.CfnParameter(
+      this,
+      'momentoAuthTokenSecretArn',
+      {
+        type: 'String',
+        description:
+          'The ARN containing your Momento auth token as plaintext (best practice)',
+      }
+    );
 
     InfrastructureStack.validateRotationParams(
       props.signingKeyTtlMinutes,
@@ -100,14 +105,14 @@ export class InfrastructureStack extends cdk.Stack {
           'secretsmanager:DescribeSecret',
           'secretsmanager:UpdateSecretVersionStage',
         ],
-        resources: ["*"],
+        resources: ['*'],
       })
     );
     lambdaRole.addToPolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['secretsmanager:GetSecretValue'],
-        resources: ["*"],
+        resources: ['*'],
       })
     );
 
@@ -133,7 +138,8 @@ export class InfrastructureStack extends cdk.Stack {
         memorySize: 512,
         role: lambdaRole,
         environment: {
-          MOMENTO_AUTH_TOKEN_SECRET_ARN: momentoAuthTokenSecretArnParam.valueAsString,
+          MOMENTO_AUTH_TOKEN_SECRET_ARN:
+            momentoAuthTokenSecretArnParam.valueAsString,
           EXPORT_METRICS: props.exportMetrics.toString(),
           SIGNING_KEY_TTL_MINUTES: props.signingKeyTtlMinutes.toString(),
         },
