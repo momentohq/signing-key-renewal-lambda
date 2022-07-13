@@ -33,6 +33,4 @@ target
 .env
 .DS_Store
 cdk.context.json
-infrastructure/yarn.lock
-infrastructure/package-lock.json
 *.env

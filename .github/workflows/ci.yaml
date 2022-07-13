@@ -8,7 +8,6 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     env:
       TEST_AUTH_TOKEN: ${{ secrets.ALPHA_TEST_AUTH_TOKEN }}
@@ -25,3 +24,18 @@ jobs:
         uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
         with:
           arguments: build
+      - name: Install Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16
+      - name: Install Dependencies
+        working-directory: infrastructure/
+        run: |
+          node -v
+          npm ci
+      - name: Build
+        working-directory: infrastructure/
+        run: npm run build
+      - name: Lint
+        working-directory: infrastructure/
+        run: npm run lint
