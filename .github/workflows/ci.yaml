@@ -25,5 +25,5 @@ jobs:
         with:
           arguments: build
       - name: Verify package-lock.json contents
-        run: "${GITHUB_WORKSPACE}/infrastructure/verify-package-lock.sh"
+        run: "${GITHUB_WORKSPACE}/verify-package-lock.sh"
         shell: bash
