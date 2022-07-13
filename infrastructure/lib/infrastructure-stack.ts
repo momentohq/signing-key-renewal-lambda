@@ -24,6 +24,10 @@ interface Props extends cdk.StackProps {
   rotateAutomaticallyAfterInDays: number;
   // Override this if you are not using the default AWS KMS key for your secret
   kmsKeyArn?: string;
+  // Override this if you are not storing your Momento auth token as a simple string.
+  // Example: if this it is persisted in SecretsManager as '{"token": "<momento auth token value>"}', you
+  // would pass in "token"
+  authTokenKeyValue?: string;
 }
 
 export class InfrastructureStack extends cdk.Stack {
@@ -145,6 +149,9 @@ export class InfrastructureStack extends cdk.Stack {
         },
       }
     );
+    if (props.authTokenKeyValue) {
+      func.addEnvironment('AUTH_TOKEN_KEY_VALUE', props.authTokenKeyValue);
+    }
 
     func.grantInvoke(new iam.ServicePrincipal('secretsmanager.amazonaws.com'));
 

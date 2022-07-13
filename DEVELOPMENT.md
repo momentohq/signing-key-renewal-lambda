@@ -28,6 +28,8 @@ Below is a list of optional environment variables you can pass in:
 * `AUTO_ROTATION_IN_DAYS`: override the schedule (in days) in which the signing key will be renewed. **Default:** 11 days
 * `EXPORT_METRICS`: set to `true` if you would like the lambda to publish CloudWatch metrics to your account indicating the time until the signing key expires. **Default:** `false`
 * `KMS_KEY_ARN`: override if you want to use your own KMS key to encrypt your secret in Secrets Manager. **Default:** `null`
+* `AUTH_TOKEN_KEY_VALUE`: override if you are not storing your Momento auth token as a regular string in Secrets Manager. Example: if you are storing your auth token like this: `{"token": "<momento token value>"}`,
+   you would pass in `token`.
 
 ## To tear down stack
 ```shell

@@ -8,6 +8,8 @@ import com.amazonaws.util.StringUtils;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import example.awsclients.AwsClientsFactory;
 import example.awsclients.cloudwatch.CloudWatch;
 import example.awsclients.secretsmanager.SecretsManager;
@@ -25,6 +27,7 @@ public class Handler implements RequestHandler<Map<String,String>, String> {
   private static final String SIGNING_KEY_TTL_MINUTES = "SIGNING_KEY_TTL_MINUTES";
   private static final String EXPORT_METRICS = "EXPORT_METRICS";
   private static final String USE_LOCAL_STUBS = "USE_LOCAL_STUBS";
+  private static final String AUTH_TOKEN_KEY_VALUE = "AUTH_TOKEN_KEY_VALUE";
   private final List<String> environmentVariableNames = Arrays.asList(
           MOMENTO_AUTH_TOKEN_SECRET_ARN,
           SIGNING_KEY_TTL_MINUTES,
@@ -59,13 +62,14 @@ public class Handler implements RequestHandler<Map<String,String>, String> {
     LambdaLogger logger = context.getLogger();
     validateEnvironment();
     final String momentoAuthTokenSecretArn = System.getenv(MOMENTO_AUTH_TOKEN_SECRET_ARN);
+    final String authTokenKeyValue = System.getenv(AUTH_TOKEN_KEY_VALUE);
     final int signingKeyTtlMinutes = Integer.parseInt(System.getenv(SIGNING_KEY_TTL_MINUTES));
     final boolean exportMetrics = Boolean.parseBoolean(System.getenv(EXPORT_METRICS));
     final boolean shouldUseLocalStubs = shouldUseLocalStubs();
 
     SecretsManager secretsManager = AwsClientsFactory.getSecretsManagerClient(shouldUseLocalStubs, logger);
     CloudWatch cloudWatch = AwsClientsFactory.getCloudWatchClient(shouldUseLocalStubs, logger);
-    try (SimpleCacheClient momentoClient = createSimpleCacheClient(secretsManager,momentoAuthTokenSecretArn)) {
+    try (SimpleCacheClient momentoClient = createSimpleCacheClient(secretsManager, momentoAuthTokenSecretArn, authTokenKeyValue)) {
       RotationWorkflow rotationWorkflow = new RotationWorkflow(logger,
               secretsManager,
               cloudWatch,
@@ -108,9 +112,19 @@ public class Handler implements RequestHandler<Map<String,String>, String> {
   }
 
   private SimpleCacheClient createSimpleCacheClient(SecretsManager secretsManager,
-                                                    String momentoAuthTokenSecretId) {
-    // This assumes your Momento auth token is stored as a pure
+                                                    String momentoAuthTokenSecretId,
+                                                    String authTokenKeyValue) {
     String momentoAuthToken = secretsManager.getSecretValueString(momentoAuthTokenSecretId, null, null);
+    // If your token is stored like this: '{"token": "<momento auth token value>"}',
+    // you would pass in "token" for authTokenKeyValue.
+    // Otherwise, this will presume your token is stored as a simple string
+    Optional<String> maybeAuthTokenKeyValue = Optional.ofNullable(authTokenKeyValue);
+    if (maybeAuthTokenKeyValue.isPresent()) {
+      JsonElement element = gson.fromJson(momentoAuthToken, JsonElement.class);
+      JsonObject obj = element.getAsJsonObject();
+      String parsedToken = obj.get(maybeAuthTokenKeyValue.get()).getAsString();
+      return SimpleCacheClient.builder(parsedToken, 300).build();
+    }
     return SimpleCacheClient.builder(momentoAuthToken, 300).build();
   }
 
