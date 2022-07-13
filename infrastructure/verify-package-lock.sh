@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
+set -e
 
-private_repo=$(cat package-lock.json | grep "momento-prod")
+private_repo=$(cat infrastructure/package-lock.json | grep "momento-prod")
 if [ -z "$private_repo" ]
 then
   echo "package-lock.json is ok"
