@@ -14,9 +14,15 @@ const exportMetrics: boolean =
   process.env.EXPORT_METRICS?.toLowerCase() === 'true' ? true : false ?? false;
 const kmsKeyArn: string | undefined = process.env.KMS_KEY_ARN;
 const authTokenKeyValue: string | undefined = process.env.AUTH_TOKEN_KEY_VALUE;
+const overrideAccountId: string | undefined = process.env.OVERRIDE_ACCOUNT_ID;
+const overrideRegion: string | undefined = process.env.OVERRIDE_REGION;
 
 const app = new cdk.App();
 new InfrastructureStack(app, 'momento-signing-key-renewal-stack', {
+  env: {
+    account: overrideAccountId,
+    region: overrideRegion,
+  },
   momentoSigningKeySecretName: momentoSigningKeySecretName,
   exportMetrics: exportMetrics,
   signingKeyTtlMinutes: parseInt(singingKeyTtlMinutes),
