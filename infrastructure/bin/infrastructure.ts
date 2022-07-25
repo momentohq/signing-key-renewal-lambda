@@ -1,6 +1,7 @@
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import {InfrastructureStack} from '../lib/infrastructure-stack';
+import {discoverEnvironment} from './environment';
 
 const DEFAULT_SIGNING_KEY_TTL_MINUTES = '20160'; // 14 days in minutes
 const DEFAULT_AUTO_ROTATION_IN_DAYS = '11'; // Rotate automatically in 11 days
@@ -14,14 +15,14 @@ const exportMetrics: boolean =
   process.env.EXPORT_METRICS?.toLowerCase() === 'true' ? true : false ?? false;
 const kmsKeyArn: string | undefined = process.env.KMS_KEY_ARN;
 const authTokenKeyValue: string | undefined = process.env.AUTH_TOKEN_KEY_VALUE;
-const overrideAccountId: string | undefined = process.env.OVERRIDE_ACCOUNT_ID;
-const overrideRegion: string | undefined = process.env.OVERRIDE_REGION;
+
+const env = discoverEnvironment();
 
 const app = new cdk.App();
 new InfrastructureStack(app, 'momento-signing-key-renewal-stack', {
   env: {
-    account: overrideAccountId,
-    region: overrideRegion,
+    account: env.awsAccountId,
+    region: env.awsRegion,
   },
   momentoSigningKeySecretName: momentoSigningKeySecretName,
   exportMetrics: exportMetrics,
