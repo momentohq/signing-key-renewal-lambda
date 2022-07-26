@@ -21,7 +21,7 @@ const app = new cdk.App();
 new InfrastructureStack(app, 'momento-signing-key-renewal-stack', {
   env: {
     account: process.env.OVERRIDE_ACCOUNT_ID || process.env.CDK_DEFAULT_ACCOUNT,
-    region: process.env.OVERRID_REGION || process.env.CDK_DEFAULT_REGION,
+    region: process.env.OVERRIDE_REGION || process.env.CDK_DEFAULT_REGION,
   },
   momentoSigningKeySecretName: momentoSigningKeySecretName,
   exportMetrics: exportMetrics,
