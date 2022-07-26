@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/java:8.al2
+FROM --platform=linux/amd64 public.ecr.aws/lambda/java:8.al2
 
 # Copy function code and runtime dependencies from Gradle layout
 COPY build/classes/java/main ${LAMBDA_TASK_ROOT}

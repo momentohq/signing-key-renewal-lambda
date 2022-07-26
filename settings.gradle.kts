@@ -5,3 +5,6 @@
  */
 
 rootProject.name = "signing-key-renewal-lambda"
+include(
+  ":app:signing-key-renewal-lambda"
+)

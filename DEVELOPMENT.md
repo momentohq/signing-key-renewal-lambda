@@ -75,13 +75,14 @@ Compile with:
 Build the docker image:
 
 ```shell
-docker build -t signing-key-renewal .
+cd app/signing-key-renewal-lambda
+docker build -t signing-key-renewal docker/
 ```
 
 And then run with:
 
 ```shell
-docker run --env-file=.env -p 9000:8080 signing-key-renewal
+docker run --env-file=path/to/.env/file -p 9000:8080 signing-key-renewal
 ```
 
 In a separate terminal:
