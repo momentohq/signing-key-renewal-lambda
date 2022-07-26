@@ -5,6 +5,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as kms from 'aws-cdk-lib/aws-kms';
+import * as path from 'path';
 import {
   Effect,
   ManagedPolicy,
@@ -28,6 +29,9 @@ interface Props extends cdk.StackProps {
   // Example: if this it is persisted in SecretsManager as '{"token": "<momento auth token value>"}', you
   // would pass in "token"
   authTokenKeyValue?: string;
+  // Override this if you would like to have your lambda function be
+  // Docker-based
+  useDockerImageLambda?: boolean;
 }
 
 export class InfrastructureStack extends cdk.Stack {
@@ -128,13 +132,35 @@ export class InfrastructureStack extends cdk.Stack {
       })
     );
 
-    const func = new lambda.Function(
-      this,
-      'momento-signing-key-renewal-lambda',
-      {
+    const dockerFilePath = path.join(
+      __dirname,
+      '../../app/signing-key-renewal-lambda/'
+    );
+
+    let func: lambda.Function;
+    if (props.useDockerImageLambda) {
+      func = new lambda.DockerImageFunction(
+        this,
+        'momento-signing-key-renewal-lambda-docker',
+        {
+          code: lambda.DockerImageCode.fromImageAsset(dockerFilePath),
+          functionName: 'momento-signing-key-renewal-lambda-docker',
+          timeout: Duration.seconds(60),
+          memorySize: 512,
+          role: lambdaRole,
+          environment: {
+            MOMENTO_AUTH_TOKEN_SECRET_ARN:
+              momentoAuthTokenSecretArnParam.valueAsString,
+            EXPORT_METRICS: props.exportMetrics.toString(),
+            SIGNING_KEY_TTL_MINUTES: props.signingKeyTtlMinutes.toString(),
+          },
+        }
+      );
+    } else {
+      func = new lambda.Function(this, 'momento-signing-key-renewal-lambda', {
         runtime: lambda.Runtime.JAVA_8_CORRETTO,
         code: lambda.Code.fromAsset(
-          '../build/libs/signing-key-renewal-lambda-1.0-SNAPSHOT.jar'
+          '../app/signing-key-renewal-lambda/build/libs/signing-key-renewal-lambda-1.0-SNAPSHOT.jar'
         ),
         handler: 'example.Handler',
         functionName: 'momento-signing-key-renewal-lambda',
@@ -147,8 +173,8 @@ export class InfrastructureStack extends cdk.Stack {
           EXPORT_METRICS: props.exportMetrics.toString(),
           SIGNING_KEY_TTL_MINUTES: props.signingKeyTtlMinutes.toString(),
         },
-      }
-    );
+      });
+    }
     if (props.authTokenKeyValue) {
       func.addEnvironment('AUTH_TOKEN_KEY_VALUE', props.authTokenKeyValue);
     }
