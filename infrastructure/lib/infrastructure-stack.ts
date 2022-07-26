@@ -160,7 +160,7 @@ export class InfrastructureStack extends cdk.Stack {
       func = new lambda.Function(this, 'momento-signing-key-renewal-lambda', {
         runtime: lambda.Runtime.JAVA_8_CORRETTO,
         code: lambda.Code.fromAsset(
-          '../../app/signing-key-renewal-lambda/build/libs/signing-key-renewal-lambda-1.0-SNAPSHOT.jar'
+          '../app/signing-key-renewal-lambda/build/libs/signing-key-renewal-lambda-1.0-SNAPSHOT.jar'
         ),
         handler: 'example.Handler',
         functionName: 'momento-signing-key-renewal-lambda',
