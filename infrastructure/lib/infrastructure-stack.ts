@@ -13,7 +13,7 @@ import {
   ServicePrincipal,
 } from 'aws-cdk-lib/aws-iam';
 
-interface Props extends cdk.StackProps {
+interface SigningKeyOptions {
   // The name you would like to give to the Secret containing your Momento signing key
   momentoSigningKeySecretName?: string;
   // Set to true if you would like metrics exported to your AWS account
@@ -35,8 +35,13 @@ interface Props extends cdk.StackProps {
 }
 
 export class InfrastructureStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: Props) {
-    super(scope, id);
+  constructor(
+    scope: Construct,
+    id: string,
+    stackProps: cdk.StackProps,
+    signingKeyOptions: SigningKeyOptions
+  ) {
+    super(scope, id, stackProps);
 
     // Having a CfnParameter here should ensure that one-click deploy users can pass in their Secret ARN containing
     // their Momento auth token
@@ -51,12 +56,12 @@ export class InfrastructureStack extends cdk.Stack {
     );
 
     InfrastructureStack.validateRotationParams(
-      props.signingKeyTtlMinutes,
-      props.rotateAutomaticallyAfterInDays
+      signingKeyOptions.signingKeyTtlMinutes,
+      signingKeyOptions.rotateAutomaticallyAfterInDays
     );
 
-    const signingKeyName = props.momentoSigningKeySecretName
-      ? props.momentoSigningKeySecretName
+    const signingKeyName = signingKeyOptions.momentoSigningKeySecretName
+      ? signingKeyOptions.momentoSigningKeySecretName
       : 'momento/signing-key';
     let momentoSigningKeySecret: secretsmanager.Secret;
 
@@ -74,12 +79,12 @@ export class InfrastructureStack extends cdk.Stack {
         ],
       }
     );
-    if (props.kmsKeyArn !== undefined) {
+    if (signingKeyOptions.kmsKeyArn !== undefined) {
       lambdaRole.addToPolicy(
         new PolicyStatement({
           effect: Effect.ALLOW,
           actions: ['kms:Decrypt', 'kms:GenerateDataKey'],
-          resources: [props.kmsKeyArn],
+          resources: [signingKeyOptions.kmsKeyArn],
         })
       );
       momentoSigningKeySecret = new secretsmanager.Secret(
@@ -90,7 +95,7 @@ export class InfrastructureStack extends cdk.Stack {
           encryptionKey: kms.Key.fromKeyArn(
             this,
             'secret-kms-key',
-            props.kmsKeyArn
+            signingKeyOptions.kmsKeyArn
           ),
         }
       );
@@ -138,7 +143,7 @@ export class InfrastructureStack extends cdk.Stack {
     );
 
     let func: lambda.Function;
-    if (props.useDockerImageLambda) {
+    if (signingKeyOptions.useDockerImageLambda) {
       func = new lambda.DockerImageFunction(
         this,
         'momento-signing-key-renewal-lambda-docker',
@@ -151,8 +156,9 @@ export class InfrastructureStack extends cdk.Stack {
           environment: {
             MOMENTO_AUTH_TOKEN_SECRET_ARN:
               momentoAuthTokenSecretArnParam.valueAsString,
-            EXPORT_METRICS: props.exportMetrics.toString(),
-            SIGNING_KEY_TTL_MINUTES: props.signingKeyTtlMinutes.toString(),
+            EXPORT_METRICS: signingKeyOptions.exportMetrics.toString(),
+            SIGNING_KEY_TTL_MINUTES:
+              signingKeyOptions.signingKeyTtlMinutes.toString(),
           },
         }
       );
@@ -170,20 +176,26 @@ export class InfrastructureStack extends cdk.Stack {
         environment: {
           MOMENTO_AUTH_TOKEN_SECRET_ARN:
             momentoAuthTokenSecretArnParam.valueAsString,
-          EXPORT_METRICS: props.exportMetrics.toString(),
-          SIGNING_KEY_TTL_MINUTES: props.signingKeyTtlMinutes.toString(),
+          EXPORT_METRICS: signingKeyOptions.exportMetrics.toString(),
+          SIGNING_KEY_TTL_MINUTES:
+            signingKeyOptions.signingKeyTtlMinutes.toString(),
         },
       });
     }
-    if (props.authTokenKeyValue) {
-      func.addEnvironment('AUTH_TOKEN_KEY_VALUE', props.authTokenKeyValue);
+    if (signingKeyOptions.authTokenKeyValue) {
+      func.addEnvironment(
+        'AUTH_TOKEN_KEY_VALUE',
+        signingKeyOptions.authTokenKeyValue
+      );
     }
 
     func.grantInvoke(new iam.ServicePrincipal('secretsmanager.amazonaws.com'));
 
     momentoSigningKeySecret.addRotationSchedule('rotation-schedule', {
       rotationLambda: func,
-      automaticallyAfter: Duration.days(props.rotateAutomaticallyAfterInDays),
+      automaticallyAfter: Duration.days(
+        signingKeyOptions.rotateAutomaticallyAfterInDays
+      ),
     });
   }
 
