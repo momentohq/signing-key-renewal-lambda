@@ -18,9 +18,13 @@ const useDockerImageLambda: boolean =
   process.env.USE_DOCKER_IMAGE_LAMBDA?.toLowerCase() === 'true' ?? false;
 
 const app = new cdk.App();
-new InfrastructureStack(app, 'momento-signing-key-renewal-stack', {
+new InfrastructureStack(
+  app,
+  'momento-signing-key-renewal-stack',
+  {
     env: {
-      account: process.env.OVERRIDE_ACCOUNT_ID || process.env.CDK_DEFAULT_ACCOUNT,
+      account:
+        process.env.OVERRIDE_ACCOUNT_ID || process.env.CDK_DEFAULT_ACCOUNT,
       region: process.env.OVERRIDE_REGION || process.env.CDK_DEFAULT_REGION,
     },
   },
@@ -32,4 +36,5 @@ new InfrastructureStack(app, 'momento-signing-key-renewal-stack', {
     kmsKeyArn: kmsKeyArn,
     authTokenKeyValue: authTokenKeyValue,
     useDockerImageLambda: useDockerImageLambda,
-  });
+  }
+);

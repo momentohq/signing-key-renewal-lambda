@@ -35,7 +35,12 @@ interface SigningKeyOptions {
 }
 
 export class InfrastructureStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, stackProps: cdk.StackProps, signingKeyOptions: SigningKeyOptions) {
+  constructor(
+    scope: Construct,
+    id: string,
+    stackProps: cdk.StackProps,
+    signingKeyOptions: SigningKeyOptions
+  ) {
     super(scope, id, stackProps);
 
     // Having a CfnParameter here should ensure that one-click deploy users can pass in their Secret ARN containing
@@ -152,7 +157,8 @@ export class InfrastructureStack extends cdk.Stack {
             MOMENTO_AUTH_TOKEN_SECRET_ARN:
               momentoAuthTokenSecretArnParam.valueAsString,
             EXPORT_METRICS: signingKeyOptions.exportMetrics.toString(),
-            SIGNING_KEY_TTL_MINUTES: signingKeyOptions.signingKeyTtlMinutes.toString(),
+            SIGNING_KEY_TTL_MINUTES:
+              signingKeyOptions.signingKeyTtlMinutes.toString(),
           },
         }
       );
@@ -171,19 +177,25 @@ export class InfrastructureStack extends cdk.Stack {
           MOMENTO_AUTH_TOKEN_SECRET_ARN:
             momentoAuthTokenSecretArnParam.valueAsString,
           EXPORT_METRICS: signingKeyOptions.exportMetrics.toString(),
-          SIGNING_KEY_TTL_MINUTES: signingKeyOptions.signingKeyTtlMinutes.toString(),
+          SIGNING_KEY_TTL_MINUTES:
+            signingKeyOptions.signingKeyTtlMinutes.toString(),
         },
       });
     }
     if (signingKeyOptions.authTokenKeyValue) {
-      func.addEnvironment('AUTH_TOKEN_KEY_VALUE', signingKeyOptions.authTokenKeyValue);
+      func.addEnvironment(
+        'AUTH_TOKEN_KEY_VALUE',
+        signingKeyOptions.authTokenKeyValue
+      );
     }
 
     func.grantInvoke(new iam.ServicePrincipal('secretsmanager.amazonaws.com'));
 
     momentoSigningKeySecret.addRotationSchedule('rotation-schedule', {
       rotationLambda: func,
-      automaticallyAfter: Duration.days(signingKeyOptions.rotateAutomaticallyAfterInDays),
+      automaticallyAfter: Duration.days(
+        signingKeyOptions.rotateAutomaticallyAfterInDays
+      ),
     });
   }
 
